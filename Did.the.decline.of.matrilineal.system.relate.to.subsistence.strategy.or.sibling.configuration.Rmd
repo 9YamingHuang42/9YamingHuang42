@@ -1,0 +1,986 @@
+---
+title: "Did.the.decline.of.matrilineal.system.relate.to.subsistence.strategy.or.sibling.configuration"
+author: "Yaming Huang"
+date: "2024-04-16"
+output: pdf_document
+---
+
+```{r Setup, echo=FALSE, warning=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dagitty)
+library(glmmTMB)
+library(emmeans)
+library(plyr)
+library(dplyr)
+library(MuMIn)
+library(geepack)
+library(ggplot2)
+library(dotwhisker)
+library(ggalt)
+library(rethinking)
+options(digits = 12)
+# LOAD INHERITANCE AND GIFTS DATA
+load("D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\paper\\Did.the.decline.of.matrilineal.system.relate.to.subsistence.strategy.or.sibling.configuration.RData")
+
+```
+
+## The DAG for inheritance system
+
+We use a directed acyclic graph to identify the cause–effect relationships that we intend to model. For testing the interactions of gender and other variables (cohorts, sibling configuration and subsistence system), our models should been stratified by cohorts, sibling configuration and subsistence system, respectively.
+
+```{r Inheritance system analyses, echo=TRUE}
+# DAG of inheritance system ----
+DAG_inherit <- dagitty('dag {
+"birth order" [pos="-0.876,0.824"]
+cohorts [pos="0.067,-1.231"]
+gender [exposure,pos="-0.983,-1.220"]
+inheritance [outcome,pos="-1.476,-0.078"]
+siblings [pos="0.260,0.813"]
+subsistence [pos="0.629,-0.122"]
+"birth order" -> inheritance
+cohorts -> "birth order"
+cohorts -> inheritance
+cohorts -> siblings
+cohorts -> subsistence
+gender -> inheritance
+siblings -> inheritance
+subsistence -> inheritance
+}
+')
+
+plot(DAG_inherit)
+
+
+# Build models ----
+Inheritance.model.1 <- glmmTMB(Inheritance ~ 1 + (1|Mother_ID),
+                               data = Inheritance.data,
+                               family = binomial())
+
+Inheritance.model.2 <- glmmTMB(Inheritance ~ Cohort + (1|Mother_ID),
+                               data = Inheritance.data,
+                               family = binomial())
+
+Inheritance.model.3 <- glmmTMB(Inheritance ~ Gender + (1|Mother_ID),
+                               data = Inheritance.data,
+                               family = binomial())
+
+Inheritance.model.4 <- glmmTMB(Inheritance ~ Sibling.configuration + (1|Mother_ID),
+                               data = Inheritance.data,
+                               family = binomial())
+
+Inheritance.model.5 <- glmmTMB(Inheritance ~ Subsistence + (1|Mother_ID),
+                               data = Inheritance.data,
+                               family = binomial())
+
+Inheritance.model.6 <- glmmTMB(Inheritance ~ Cohort + Gender + (1|Mother_ID),
+                               data = Inheritance.data,
+                               family = binomial())
+
+Inheritance.model.7 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+                                 Sibling.configuration + (1|Mother_ID),
+                               data = Inheritance.data,
+                               family = binomial())
+
+Inheritance.model.8 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+                                 Subsistence + (1|Mother_ID),
+                               data = Inheritance.data,
+                               family = binomial())
+
+Inheritance.model.9 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+                                 Sibling.configuration + Subsistence + 
+                                 (1|Mother_ID),
+                               data = Inheritance.data,
+                               family = binomial())
+summary(Inheritance.model.9)
+Inheritance.model.9.Conf <- as.data.frame(confint(Inheritance.model.9, level = 0.95))
+(Inheritance.model.9.OR <- exp(Inheritance.model.9.Conf))
+
+Inheritance.model.10 <- glmmTMB(Inheritance ~ Cohort * Gender + 
+                                  Sibling.configuration + Subsistence + (1|Mother_ID),
+                                data = Inheritance.data,
+                                family = binomial())
+summary(Inheritance.model.10)
+Em.inheritance.model.10 <- emmeans(Inheritance.model.10, ~ Cohort * Gender)
+contrast(Em.inheritance.model.10, "revpairwise", by="Cohort", adjust="none")
+Em.inheritance.model.10.confint <- as.data.frame(confint(contrast(Em.inheritance.model.10, "revpairwise", by="Cohort", adjust="none")))
+(Em.inheritance.model.10.confint.OR_95ci <- Em.inheritance.model.10.confint %>%
+  mutate(OR = exp(Em.inheritance.model.10.confint$estimate),
+         low_ci = exp(Em.inheritance.model.10.confint$lower.CL),
+         high_ci = exp(Em.inheritance.model.10.confint$upper.CL)))
+Inheritance.model.10.Conf <- as.data.frame(confint(Inheritance.model.10,level = 0.95))
+(Inheritance.model.10.OR_95ci <- exp(Inheritance.model.10.Conf))
+
+Inheritance.model.11 <- glmmTMB(Inheritance ~ Cohort + 
+                                  Gender * Sibling.configuration +
+                                   Subsistence + (1|Mother_ID),
+                                 data = Inheritance.data,
+                                 family = binomial())
+summary(Inheritance.model.11)
+Em.inheritance.model.11<- emmeans(Inheritance.model.11, ~ Gender * Sibling.configuration)
+contrast(Em.inheritance.model.11, "revpairwise",by="Sibling.configuration",adjust="none")
+Em.inheritance.model.11.confint <- as.data.frame(confint(contrast(Em.inheritance.model.11, "revpairwise", by="Sibling.configuration", adjust="none")))
+(Em.inheritance.model.11.confint.OR_95ci <- Em.inheritance.model.11.confint %>%
+  mutate(OR = exp(Em.inheritance.model.11.confint$estimate),
+         low_ci = exp(Em.inheritance.model.11.confint$lower.CL),
+         high_ci = exp(Em.inheritance.model.11.confint$upper.CL)))
+Inheritance.model.11.Conf <- as.data.frame(confint(Inheritance.model.11, level = 0.95))
+(Inheritance.model.11.OR_95ci <- exp(Inheritance.model.11.Conf))
+
+Inheritance.model.12 <- glmmTMB(Inheritance ~ Cohort + Sibling.configuration +
+                                  Gender * Subsistence + (1|Mother_ID),
+                                data = Inheritance.data,
+                                family = binomial())
+summary(Inheritance.model.12)
+Em.inheritance.model.12 <- emmeans(Inheritance.model.12, ~ Subsistence * Gender)
+contrast(Em.inheritance.model.12, "revpairwise",by="Subsistence",adjust="none")
+Em.inheritance.model.12.confint <- as.data.frame(confint(contrast(Em.inheritance.model.12, "revpairwise", by="Subsistence", adjust="none")))
+(Em.inheritance.model.12.confint.OR_95ci <- Em.inheritance.model.12.confint %>%
+  mutate(OR = exp(Em.inheritance.model.12.confint$estimate),
+         low_ci = exp(Em.inheritance.model.12.confint$lower.CL),
+         high_ci = exp(Em.inheritance.model.12.confint$upper.CL)))
+Inheritance.model.12.Conf <- as.data.frame(confint(Inheritance.model.12, level = 0.95))
+(Inheritance.model.12.OR_95ci <- exp(Inheritance.model.12.Conf))
+
+(Model.sel.inheritance <- model.sel(Inheritance.model.1,
+                                    Inheritance.model.2,
+                                    Inheritance.model.3,
+                                    Inheritance.model.4,
+                                    Inheritance.model.5,
+                                    Inheritance.model.6,
+                                    Inheritance.model.7,
+                                    Inheritance.model.8,
+                                    Inheritance.model.9,
+                                    Inheritance.model.10,
+                                    Inheritance.model.11,
+                                    Inheritance.model.12,
+                                    rank = AIC))
+
+(AIC.inheritance <- AIC(Inheritance.model.1,
+                        Inheritance.model.2,
+                        Inheritance.model.3,
+                        Inheritance.model.4,
+                        Inheritance.model.5,
+                        Inheritance.model.6,
+                        Inheritance.model.7,
+                        Inheritance.model.8,
+                        Inheritance.model.9,
+                        Inheritance.model.10,
+                        Inheritance.model.11,
+                        Inheritance.model.12))
+
+# Plot figures ----
+## OR figures-model 10, model 11 and model 12  ----
+Inheritance.fig.3models<-data.frame(
+  term = c("<=1955","1956-1965","1966-1975",
+           "1976-1985","1986-1995",">1995",
+           "Equal number","More sisters","More brothers",
+           "Farming","Half farming and half pastoral",
+           "Pastoral","Non-traditional"),
+  estimate = c(Em.inheritance.model.10.confint.OR_95ci$estimate,
+               Em.inheritance.model.11.confint.OR_95ci$estimate,
+               Em.inheritance.model.12.confint.OR_95ci$estimate),
+  std.error = c(Em.inheritance.model.10.confint.OR_95ci$SE,
+                Em.inheritance.model.11.confint.OR_95ci$SE,
+                Em.inheritance.model.12.confint.OR_95ci$SE),
+  OR = c(Em.inheritance.model.10.confint.OR_95ci$OR,
+         Em.inheritance.model.11.confint.OR_95ci$OR,
+         Em.inheritance.model.12.confint.OR_95ci$OR),
+  ORlower = c(Em.inheritance.model.10.confint.OR_95ci$low_ci,
+              Em.inheritance.model.11.confint.OR_95ci$low_ci,
+              Em.inheritance.model.12.confint.OR_95ci$low_ci),
+  ORhigher = c(Em.inheritance.model.10.confint.OR_95ci$high_ci,
+               Em.inheritance.model.11.confint.OR_95ci$high_ci,
+               Em.inheritance.model.12.confint.OR_95ci$high_ci),
+  model = c("Model 10","Model 10","Model 10",
+            "Model 10","Model 10","Model 10",
+            "Model 11","Model 11","Model 11",
+            "Model 12","Model 12","Model 12","Model 12"))
+Inheritance.fig.3models$term <- factor(Inheritance.fig.3models$term,
+                                       levels = c("<=1955","1956-1965","1966-1975",
+                                                  "1976-1985","1986-1995",">1995",
+                                                  "Equal number","More sisters","More brothers",
+                                                  "Farming","Half farming and half pastoral",
+                                                  "Non-traditional","Pastoral"),
+                                       labels = c("cohort.1","cohort.2","cohort.3",
+                                                  "cohort.4","cohort.5","cohort.6",
+                                                  "Equal.number","More.sisters","More.brothers",
+                                                  "Farming","Half.farming.and.half.pastoral",
+                                                  "Non.traditional","Pastoral"))
+Inheritance.fig.3models$model <- factor(Inheritance.fig.3models$model,
+                                        levels = c("Model 10","Model 11","Model 12"),
+                                        labels = c("Model 10","Model 11","Model 12"))
+
+
+{{
+  dwplot(Inheritance.fig.3models,
+         style = "distribution",
+         model_name = "Models",
+         dot_args = list(size = 1.2),
+         dist_args = list(alpha = 0.25),
+         line_args = list(alpha = 0.75, size = 0.2),
+         vline = geom_vline(xintercept = 0,
+                            colour = "grey60",
+                            linetype = 2))
+}%>% # plot line at zero _behind_ coefs
+    relabel_predictors(
+      c(cohort.1 = "<=1955: male\n(ref: female)",
+        cohort.2 = "1956-1965: male\n(ref: female)",
+        cohort.3 = "1966-1975: male\n(ref: female)",
+        cohort.4 = "1976-1985: male\n(ref: female)",
+        cohort.5 = "1986-1995: male\n(ref: female)",
+        cohort.6 = ">=1995: male\n(ref: female)",
+        Equal.number = "Equal number: male\n(ref: female)",
+        More.sisters = "More sisters: male\n(ref: female)",
+        More.brothers = "More brothers: male\n(ref: female)",
+        Farming = "Agriculture: male\n(ref: female)",
+        Half.farming.and.half.pastoral = "Semi-agriculture, semi-pastoralism: male\n(ref: female)",
+        Non.traditional = "Non-traditional industry: male\n(ref: female)",
+        Pastoral = "Pastoralism: male\n(ref: female)")
+    )+ 
+    xlab("Coefficients")+
+    scale_x_continuous(limits = c((-2),2),breaks = seq((-2),2,1))+
+    scale_colour_brewer(palette = "Set2",
+                        name = NULL,
+                        breaks = c("Model 12","Model 11","Model 10"),
+                        labels = c("Model 12 (best fitting)\nsubsistence * gender",
+                                   "Model 11\nsibling configuration * gender",
+                                   "Model 10\ncohort * gender"))+
+    scale_fill_brewer(palette = "Set2",
+                      name = NULL,
+                      breaks = c("Model 12","Model 11","Model 10"),
+                      labels = c("Model 12 (best fitting)\nsubsistence * gender",
+                                 "Model 11\nsibling configuration * gender",
+                                 "Model 10\ncohort * gender"))+
+    theme(strip.background = element_rect(color = "black", fill = "white"),
+          strip.text.x = element_text(size = 16,face = "bold"),
+          axis.line = element_line(),
+          panel.grid.major = element_line(colour = "Gainsboro"),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(colour="black",fill=NA),
+          panel.background = element_blank(),
+          legend.position = c(0.99,0.99),
+          legend.justification = c(0.99,0.99),
+          plot.title = element_text(size=25, family = "serif",face = "bold", hjust = 0),
+          axis.title.x = element_text(size = 25,family = "serif",face = "bold",
+                                      margin = margin(t = 0.4, r = 0, b = 0, l = 0,unit = "cm")),
+          axis.text.x = element_text(colour="black",size=22, family = "serif",face = "bold",
+                                     margin = margin(t = 0.1, r = 0, b = 0, l = 0,unit = "cm")),
+          axis.title.y = element_text(size = 25,family = "serif",face = "bold",
+                                      margin = margin(t = 0, r = 0, b = 0, l = 0,unit = "cm")),
+          axis.text.y = element_text(colour="black",size=22,family = "serif",face = "bold",
+                                     margin = margin(t = 5,b = 5, unit = "pt")),
+          legend.title = element_text(size=25,family = "serif",face = "bold"),
+          legend.text = element_text(size=18,family = "serif",face = "bold",
+                                     margin = margin(t = 10,b = 10, unit = "pt")))
+}
+
+ggsave(filename="D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\paper\\Dot and whisker plot - inheritance models-3.jpeg", width=420, height=340, units="mm")
+
+## Predicted probabilities of inheriting family wealth by cohort and gender----
+Pre.inheritance.model.10 <- as.data.frame(predict(Inheritance.model.10, 
+                                                  type = "response"))
+Pre.inheritance.model.10 <- Pre.inheritance.model.10 %>%
+  mutate(Gender = Inheritance.data$Gender,
+         Birth.year = Inheritance.data$Birth.year,
+         Cohort = Inheritance.data$Cohort)
+colnames(Pre.inheritance.model.10) <- c("Predicted.pro",
+                                        "Gender","Birth.year",
+                                        "Cohort")
+
+ggplot(Pre.inheritance.model.10,
+       aes(x = Birth.year, 
+           y = Predicted.pro, 
+           color = Gender, 
+           fill = Gender,
+           shape = Gender))+
+  geom_point(size = 2.5, alpha = 0.2)+
+  geom_smooth(method = "loess", formula = y ~ x,
+              alpha = 0.3, 
+              span = 0.8,
+              se = F, linewidth = 1)+
+  geom_ribbon(stat = "smooth",
+              method = "loess", formula = y ~ x,
+              se = T,
+              alpha = 0.3,
+              span = 0.8,
+              linetype = "dashed")+
+  geom_vline(xintercept = c(1955,1965,1975,1985,1995),
+             colour = "grey60",
+             linetype = 2)+
+  labs(x = "Cohort (birth year)",
+       y = "Predicted probability of inheritance",
+       group = "Gender",
+       color = "Gender",
+       fill = "Gender",
+       shape = "Gender")+
+  scale_x_continuous(limits = c(1920,2010),breaks = seq(1920,2010,10))+
+  scale_y_continuous(limits = c(0.0,1),breaks = seq(0.0,1,0.2))+
+  scale_shape_manual(values = c(16,17))+
+  scale_color_manual(values = c("#FA7F6F","#82B0D2"))+
+  scale_fill_manual(values = c("#FA7F6F","#82B0D2"))+
+  geom_text(x = 1937.5, y = 0.9, 
+            aes(label = "Cohort 1 ***"), 
+            size = 5, colour = "black",family = "serif",fontface = "bold") +
+  geom_text(x = 1960, y = 0.9, 
+            aes(label = "Cohort 2 **"), 
+            size = 5, colour = "black",family = "serif",fontface = "bold") +
+  geom_text(x = 1970, y = 0.9, 
+            aes(label = "Cohort 3 ***"), 
+            size = 5, colour = "black",family = "serif",fontface = "bold") +
+  geom_text(x = 1980, y = 0.9, 
+            aes(label = "Cohort 4"), 
+            size = 5, colour = "black",family = "serif",fontface = "bold") +
+  geom_text(x = 1990, y = 0.9, 
+            aes(label = "Cohort 5"), 
+            size = 5, colour = "black",family = "serif",fontface = "bold") +
+  geom_text(x = 2000, y = 0.9, 
+            aes(label = "Cohort 6"), 
+            size = 5, colour = "black",family = "serif",fontface = "bold") +
+  theme(strip.background = element_rect(color = "black", fill = "white"),
+        strip.text.x = element_text(size = 16,family = "serif",face = "bold"),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line(colour = "white"),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour="black",fill=NA),
+        panel.background = element_blank(),
+        legend.position = c(0.99,0.01),
+        legend.justification = c(0.99,0.01),
+        plot.title = element_text(size=22,family = "serif",face = "bold"),
+        axis.title.x = element_text(size = 22,family = "serif",face = "bold",
+                                    margin = margin(t = 0.3, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.text.x = element_text(colour="black",size=20,family = "serif",face = "bold",
+                                   margin = margin(t = 0.1, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.title.y = element_text(size = 22,family = "serif",face = "bold",
+                                    margin = margin(t = 0, r = 0.5, b = 0, l = 0,unit = "cm")),
+        axis.text.y = element_text(colour="black",size=20,family = "serif",face = "bold",
+                                   margin = margin(t = 0, r = 0.1, b = 0, l = 0,unit = "cm")),
+        legend.title=element_text(size=18,family = "serif",face = "bold"),
+        legend.text=element_text(size=18,family = "serif",face = "bold",
+                                 margin = margin(t = 10,b = 10, unit = "pt")))
+
+ggsave(filename="D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\paper\\Gender&BY - inheritor models.jpeg", width=300, height=160, units="mm")
+
+## Predicted probabilities of inheriting family wealth by sibling configuration and gender ----
+Pre.inheritance.model.11 <- as.data.frame(predict(Inheritance.model.11, 
+                                                  type = "response"))
+Pre.inheritance.model.11 <- Pre.inheritance.model.11 %>%
+  mutate(Gender = Inheritance.data$Gender,
+         Birth.year = Inheritance.data$Birth.year,
+         Cohort = Inheritance.data$Cohort,
+         Sibling.configuration = Inheritance.data$Sibling.configuration)
+colnames(Pre.inheritance.model.11) <- c("Predicted.pro",
+                                        "Gender","Birth.year",
+                                        "Cohort","Sibling.configuration")
+
+ggplot(data = Pre.inheritance.model.11,
+       aes(x = Sibling.configuration, 
+           y = Predicted.pro,
+           color = Gender,
+           fill = Gender))+
+  geom_violin(trim = T,
+              position = position_dodge(0.6),
+              alpha = 0.2)+
+  geom_boxplot(width = 0.2,
+               position = position_dodge(0.6),
+               alpha = 0.4)+
+  labs(x = "Sibling configuration",
+       y = "Predicted probability of inheritance",
+       group = "Gender",
+       fill = "Gender")+
+  scale_x_discrete(breaks=c("No bias","Sister","Brother"),
+                   labels=c("Equal number",
+                            "More sisters",
+                            "More brothers"))+
+  scale_y_continuous(limits = c(0,1),breaks = seq(0,1,0.2))+
+  scale_fill_manual(values = c("#ff8884","#9ac9db"))+
+  scale_color_manual(values = c("#ff8884","#9ac9db"))+
+  theme(strip.background = element_rect(color = "black", fill = "white"),
+        strip.text.x = element_text(size = 16,family = "serif",face = "bold"),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour="black",fill=NA),
+        panel.background = element_blank(),
+        legend.position = "none",
+        plot.title = element_text(size=18,family = "serif",face = "bold"),
+        axis.title.x = element_text(size = 18,family = "serif",face = "bold",
+                                    margin = margin(t = 1, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.text.x = element_text(colour="black",size=16,family = "serif",face = "bold",
+                                   margin = margin(t = 0.1, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.title.y = element_text(size = 18,family = "serif",face = "bold",
+                                    margin = margin(t = 0, r = 0.5, b = 0, l = 0,unit = "cm")),
+        axis.text.y = element_text(colour="black",size=16,family = "serif",face = "bold",
+                                   margin = margin(t = 0, r = 0.1, b = 0, l = 0,unit = "cm")),
+        legend.title=element_text(size=14,family = "serif",face = "bold"),
+        legend.text=element_text(size=14,family = "serif",face = "bold",
+                                 margin = margin(t = 10,b = 10, unit = "pt")))
+
+ggsave(filename="D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\paper\\Gender&sib - inheritor models.jpeg", width=200, height=200, units="mm")
+
+## Predicted probabilities of inheriting family wealth by subsistence and gender ----
+Pre.inheritance.model.12 <- as.data.frame(predict(Inheritance.model.12, 
+                                                  type = "response"))
+Pre.inheritance.model.12 <- Pre.inheritance.model.12 %>%
+  mutate(Gender = Inheritance.data$Gender,
+         Birth.year = Inheritance.data$Birth.year,
+         Cohort = Inheritance.data$Cohort,
+         Subsistence = Inheritance.data$Subsistence)
+colnames(Pre.inheritance.model.12) <- c("Predicted.pro",
+                                        "Gender","Birth.year",
+                                        "Cohort","Subsistence")
+Pre.inheritance.model.12$Subsistence <- factor(Pre.inheritance.model.12$Subsistence,
+                                               levels = c("Non-traditional","Farming",
+                                                          "Half farming and half pastoral","Pastoral"),
+                                               labels = c("Non-traditional","Farming",
+                                                          "Half farming and half pastoral","Pastoral"))
+
+ggplot(data = Pre.inheritance.model.12,
+       aes(x = Subsistence, 
+           y = Predicted.pro,
+           color = Gender,
+           fill = Gender))+
+  geom_violin(trim = T,
+              position = position_dodge(0.6),
+              alpha = 0.2)+
+  geom_boxplot(width = 0.2,
+               position = position_dodge(0.6),
+               alpha = 0.4)+
+  labs(x = "Subsistence system",
+       y = "Predicted probability of inheritance",
+       group = "Gender",
+       fill = "Gender")+
+  scale_x_discrete(breaks=c("Non-traditional","Farming",
+                            "Half farming and half pastoral","Pastoral"),
+                   labels=c("Non-traditional\n industry","Agriculture",
+                            "Semi-agriculture &\n semi-pastoralism","Pastoralism"))+
+  scale_y_continuous(limits = c(0,1),breaks = seq(0,1,0.2))+
+  scale_fill_manual(values = c("#ff8884","#9ac9db"))+
+  scale_color_manual(values = c("#ff8884","#9ac9db"))+
+  theme(strip.background = element_rect(color = "black", fill = "white"),
+        strip.text.x = element_text(size = 16,family = "serif",face = "bold"),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour="black",fill=NA),
+        panel.background = element_blank(),
+        legend.position = c(0.99,0.99),
+        legend.justification = c(0.99,0.99),
+        plot.title = element_text(size=18,family = "serif",face = "bold"),
+        axis.title.x = element_text(size = 18,family = "serif",face = "bold",
+                                    margin = margin(t = 0.3, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.text.x = element_text(colour="black",size=16,family = "serif",face = "bold",
+                                   margin = margin(t = 0.1, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.title.y = element_text(size = 18,family = "serif",face = "bold",
+                                    margin = margin(t = 0, r = 0.5, b = 0, l = 0,unit = "cm")),
+        axis.text.y = element_text(colour="black",size=16,family = "serif",face = "bold",
+                                   margin = margin(t = 0, r = 0.1, b = 0, l = 0,unit = "cm")),
+        legend.title=element_text(size=14,family = "serif",face = "bold"),
+        legend.text=element_text(size=14,family = "serif",face = "bold",
+                                 margin = margin(t = 10,b = 10, unit = "pt")))
+
+ggsave(filename="D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\paper\\Gender&sub - inheritor models.jpeg", width=200, height=200, units="mm")
+
+## Proportions of five sibling configurations by birth cohorts ----
+Sibling.5.cohort.sum <- ddply(Inheritance.data,
+                              c("Cohort",
+                                "Sibling.configuration.original"), summarise,
+                              Num = length(Mother_ID))
+Sibling.5.cohort.sum <- as.data.frame(Sibling.5.cohort.sum) %>%
+  dplyr::group_by(Cohort) %>%
+  dplyr::mutate(Sum = sum(Num)) %>%
+  dplyr::mutate(Pro = Num/Sum)
+Sibling.5.cohort.sum.row.add <- Sibling.5.cohort.sum[29,]
+Sibling.5.cohort.sum <- rbind(Sibling.5.cohort.sum, Sibling.5.cohort.sum.row.add)
+Sibling.5.cohort.sum[29,2] <- "More daughters"
+Sibling.5.cohort.sum[29,3] <- 0
+Sibling.5.cohort.sum[29,4] <- 205
+Sibling.5.cohort.sum[29,5] <- 0
+Sibling.5.cohort.sum$Cohort.c1 <- c(rep(c(1:6), each = 5))
+
+ggplot(Sibling.5.cohort.sum,
+       aes(x = Cohort.c1,
+           y = Pro,
+           fill = Sibling.configuration.original)) +
+  geom_area(alpha = 0.35)+
+  scale_x_continuous(breaks = 1:6, 
+                     labels = c("<=1955","1956-1965",
+                                "1966-1975","1976-1985",
+                                "1986-1995",">1995"),
+                     expand=c(0, 0))+
+  scale_y_continuous(expand=c(0, 0))+
+  labs(x = "Cohort",
+       y = "Proportion",
+       fill = "Fertility")+
+  scale_fill_manual(values = c("#fb8072", "#F4A2A3", "#FFBE7A", "#8dd3c7", "#80b1d3"),
+                    breaks = c("Only daughters","More daughters",
+                               "Equal number",
+                               "More sons","Only sons"),
+                    labels = c("Only daughters","More daughters",
+                               "Equal number",
+                               "More sons","Only sons"))+
+  geom_text(x = 3.5, y = 0.97, 
+            aes(label = "Only daughters"), 
+            family = "serif",
+            size = 6, colour = "black")+
+  geom_text(x = 3.5, y = 0.75, 
+            aes(label = "More daughters"), 
+            family = "serif",
+            size = 6, colour = "black")+
+  geom_text(x = 3.5, y = 0.50, 
+            aes(label = "Equal number"), 
+            family = "serif",
+            size = 6, colour = "black")+
+  geom_text(x = 3.5, y = 0.25, 
+            aes(label = "More sons"), 
+            family = "serif",
+            size = 6, colour = "black")+
+  geom_text(x = 3.5, y = 0.03, 
+            aes(label = "Only sons"), 
+            family = "serif",
+            size = 6, colour = "black")+
+  theme(panel.grid=element_blank(),
+        panel.border = element_rect(color = "black", linewidth = 1, fill = NA),
+        panel.background=element_rect(color="black", fill='transparent'),
+        legend.position = "none",
+        axis.title.x = element_text(size = 22,family = "serif",face = "bold",
+                                    margin = margin(t = 0.3, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.text.x = element_text(colour="black",size=20,family = "serif",face = "bold",
+                                   margin = margin(t = 0.3, r = 0, b = 0.1, l = 0,unit = "cm")),
+        axis.title.y = element_text(size = 22,family = "serif",face = "bold",
+                                    margin = margin(t = 0, r = 0.5, b = 0, l = 0,unit = "cm")),
+        axis.text.y = element_text(colour="black",size=20,family = "serif",face = "bold",
+                                   margin = margin(t = 0, r = 0.3, b = 0, l = 0,unit = "cm")),
+        plot.margin = margin(t = 10,r = 30,b = 2,l = 5))
+
+ggsave(filename="D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\paper\\Sib_5&BY.jpeg", width=270, height=180, units="mm")
+
+## Proportions of four main household livelihood forms by birth cohorts ----
+Subsistence.cohort.sum <- ddply(Inheritance.data, 
+                                c("Cohort","Subsistence"), summarise, 
+                                Num = length(Mother_ID))
+
+Subsistence.cohort.sum <- as.data.frame(Subsistence.cohort.sum) %>%
+  dplyr::group_by(Cohort) %>%
+  dplyr::mutate(Sum = sum(Num)) %>%
+  dplyr::mutate(Pro = Num/Sum)
+Subsistence.cohort.sum.row.add <- Subsistence.cohort.sum[23,]
+Subsistence.cohort.sum <- rbind(Subsistence.cohort.sum,Subsistence.cohort.sum.row.add)
+Subsistence.cohort.sum[23,2] <- "Pastoral"
+Subsistence.cohort.sum[23,3] <- 0
+Subsistence.cohort.sum[23,4] <- 205
+Subsistence.cohort.sum[23,5] <- 0
+Subsistence.cohort.sum$Cohort.c1 <- c(rep(c(1:6), each = 4))
+
+ggplot(Subsistence.cohort.sum,
+       aes(x = Cohort.c1,
+           y = Pro,
+           fill = Subsistence)) +
+  geom_area(alpha = 0.35)+
+  scale_x_continuous(breaks = 1:6, 
+                     labels = c("<=1955","1956-1965",
+                                "1966-1975","1976-1985",
+                                "1986-1995",">1995"),
+                     expand=c(0, 0))+
+  scale_y_continuous(expand=c(0, 0))+
+  labs(x = "Cohort",
+       y = "Proportion",
+       fill = "Subsistence system")+
+  scale_fill_manual(values = c("#fb8072", "#FFBE7A", "#8dd3c7", "#80b1d3"),
+                    breaks = c("Farming","Half farming and half pastoral",
+                               "Pastoral","Non-traditional"),
+                    labels = c("Agriculture","Semi-agriculture & semi-pastoralism",
+                               "Pastoralism","Non-traditional industry"))+
+  geom_text(x = 3.5, y = 0.85, 
+            aes(label = "Agriculture"), 
+            family = "serif",
+            size = 6, colour = "black")+
+  geom_text(x = 3.5, y = 0.35, 
+            aes(label = "Semi-agriculture and semi-pastoralism"), 
+            family = "serif",
+            size = 6, colour = "black")+
+  geom_text(x = 3.5, y = 0.12, 
+            aes(label = "Pastoralism"), 
+            family = "serif",
+            size = 6, colour = "black")+
+  geom_text(x = 3.5, y = 0.04, 
+            aes(label = "Non-traditional industry"), 
+            family = "serif",
+            size = 6, colour = "black")+
+  theme(panel.grid=element_blank(),
+        panel.border = element_rect(color = "black", linewidth = 1, fill = NA),
+        panel.background=element_rect(color="black", fill='transparent'),
+        legend.position = "none",
+        axis.title.x = element_text(size = 22,family = "serif",face = "bold",
+                                    margin = margin(t = 0.3, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.text.x = element_text(colour="black",size=20,family = "serif",face = "bold",
+                                   margin = margin(t = 0.3, r = 0, b = 0.1, l = 0,unit = "cm")),
+        axis.title.y = element_text(size = 22,family = "serif",face = "bold",
+                                    margin = margin(t = 0, r = 0.5, b = 0, l = 0,unit = "cm")),
+        axis.text.y = element_text(colour="black",size=20,family = "serif",face = "bold",
+                                   margin = margin(t = 0, r = 0.3, b = 0, l = 0,unit = "cm")),
+        plot.margin = margin(t = 10,r = 30,b = 2,l = 5))
+
+ggsave(filename="D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\paper\\Sub&BY-area.jpeg", width=270, height=180, units="mm")
+
+```
+
+## The DAG for gifts received
+
+We also use a directed acyclic graph to identify the cause–effect relationships that we intend to model. From the results, we should include the age, dispersal pattern, gender of egos, the age and dispersal pattern of alters, and study times into models in order to test the direct effects of gender on the amount of money received.
+
+```{r Gifts received analyses, echo=TRUE}
+# DAG of gifts received ----
+DAG_gift <- dagitty('dag {
+bb="0,0,1,1"
+"alter age" [pos="0.343,0.912"]
+"alter dispersal pattern" [pos="0.089,0.566"]
+"alter economy" [pos="0.170,0.759"]
+"alter education" [pos="0.112,0.313"]
+"alter gender" [exposure,pos="0.194,0.145"]
+"ego age" [pos="0.653,0.906"]
+"ego dispersal pattern" [pos="0.913,0.561"]
+"ego economy" [pos="0.828,0.749"]
+"ego education" [pos="0.889,0.340"]
+"ego gender" [pos="0.772,0.143"]
+"gifts received" [outcome,pos="0.500,0.403"]
+"survey period" [pos="0.498,0.028"]
+"alter age" -> "alter dispersal pattern"
+"alter age" -> "gifts received"
+"alter dispersal pattern" -> "gifts received"
+"alter economy" -> "gifts received"
+"alter education" -> "gifts received"
+"alter gender" -> "alter dispersal pattern"
+"alter gender" -> "gifts received"
+"ego age" -> "alter gender"
+"ego age" -> "gifts received"
+"ego dispersal pattern" -> "alter dispersal pattern"
+"ego dispersal pattern" -> "gifts received"
+"ego economy" -> "gifts received"
+"ego education" -> "gifts received"
+"ego gender" -> "alter gender"
+"ego gender" -> "gifts received"
+"survey period" -> "alter gender"
+"survey period" -> "gifts received"
+}
+')
+
+plot(DAG_gift)
+
+# Build models ----
+Gifts.model.1 <- geeglm(No.money ~ 1,
+                        id = From.ID, family="poisson", 
+                        data = Gifts.dyad, 
+                        corstr="exchangeable", scale.fix = T)
+
+Gifts.model.2 <- geeglm(No.money ~ From.age.scale,
+                        id = From.ID, family="poisson", 
+                        data = Gifts.dyad, 
+                        corstr="exchangeable", scale.fix = T)
+
+Gifts.model.3 <- geeglm(No.money ~ From.phi.place,
+                        id = From.ID, family="poisson", 
+                        data = Gifts.dyad, 
+                        corstr="exchangeable", scale.fix = T)
+
+Gifts.model.4 <- geeglm(No.money ~ From.gender,
+                        id = From.ID, family="poisson", 
+                        data = Gifts.dyad, 
+                        corstr="exchangeable", scale.fix = T)
+
+Gifts.model.5 <- geeglm(No.money ~ To.age.scale,
+                        id = From.ID, family="poisson", 
+                        data = Gifts.dyad, 
+                        corstr="exchangeable", scale.fix = T)
+
+Gifts.model.6 <- geeglm(No.money ~ To.phi.place,
+                        id = From.ID, family="poisson",
+                        data = Gifts.dyad, 
+                        corstr="exchangeable", scale.fix = T)
+
+Gifts.model.7 <- geeglm(No.money ~ Time,
+                        id = From.ID, family="poisson",
+                        data = Gifts.dyad, 
+                        corstr="exchangeable", scale.fix = T)
+
+Gifts.model.8 <- geeglm(No.money ~ To.gender,
+                        id = From.ID, family="poisson", 
+                        data = Gifts.dyad, 
+                        corstr="exchangeable", scale.fix = T)
+
+Gifts.model.9 <- geeglm(No.money ~ From.age.scale + 
+                          From.phi.place + 
+                          From.gender + 
+                          To.age.scale + 
+                          To.phi.place + 
+                          To.gender + Time,
+                        id = From.ID, family="poisson", 
+                        data = Gifts.dyad, 
+                        corstr="exchangeable", scale.fix = T)
+
+Gifts.model.10 <- geeglm(No.money ~ From.age.scale + 
+                          From.phi.place + 
+                          From.gender + 
+                          To.age.scale + 
+                          To.phi.place + 
+                          To.gender * Time,
+                         id = From.ID, family="poisson", 
+                         data = Gifts.dyad, 
+                         corstr="exchangeable", scale.fix = T)
+summary(Gifts.model.10)$coefficients
+
+Model.sel.gifts.model <- MuMIn::model.sel(Gifts.model.1,
+                                          Gifts.model.2,
+                                          Gifts.model.3,
+                                          Gifts.model.4,
+                                          Gifts.model.5,
+                                          Gifts.model.6,
+                                          Gifts.model.7,
+                                          Gifts.model.8,
+                                          Gifts.model.9,
+                                          Gifts.model.10,
+                                          rank = "QIC")
+Model.sel.gifts.model
+(QIC.all <- QIC(Gifts.model.1,
+               Gifts.model.2,
+               Gifts.model.3,
+               Gifts.model.4,
+               Gifts.model.5,
+               Gifts.model.6,
+               Gifts.model.7,
+               Gifts.model.8,
+               Gifts.model.9,
+               Gifts.model.10))
+
+Em.gifts.model.10 <- emmeans(Gifts.model.10, ~ Time * To.gender)
+contrast(Em.gifts.model.10, "revpairwise", by="Time", adjust="none")
+Em.Gifts.model.10.confint <- as.data.frame(confint(contrast(Em.gifts.model.10, "revpairwise", by="Time", adjust="none")))
+(Em.Gifts.model.10.confint.OR_95ci <- Em.Gifts.model.10.confint %>%
+  mutate(OR = exp(Em.Gifts.model.10.confint$estimate),
+         low_ci = exp(Em.Gifts.model.10.confint$asymp.LCL),
+         high_ci = exp(Em.Gifts.model.10.confint$asymp.UCL)))
+Gifts.model.10.coef <- as.data.frame(MuMIn::coefTable(Gifts.model.10))
+(Gifts.model.10.IRR_95ci <- Gifts.model.10.coef %>% 
+  mutate(IRR = exp(Gifts.model.10.coef$Estimate),
+         lowconf = Gifts.model.10.coef$Estimate-
+           1.96*Gifts.model.10.coef$`Std. Error`,
+         lowCI = exp(Gifts.model.10.coef$Estimate-
+                       1.96*Gifts.model.10.coef$`Std. Error`),
+         highconf = Gifts.model.10.coef$Estimate+
+           1.96*Gifts.model.10.coef$`Std. Error`,
+         highCI = exp(Gifts.model.10.coef$Estimate+
+                        1.96*Gifts.model.10.coef$`Std. Error`)))
+
+# Plot figures ----
+## Predicted gifts received in dyads ----
+Pre.gifts.model <- as.data.frame(predict(Gifts.model.10, full = T,
+                                         type = "response"))
+Pre.gifts.model <- Pre.gifts.model %>%
+  mutate(Gender = Gifts.dyad$To.gender,
+         Time = Gifts.dyad$Time)
+colnames(Pre.gifts.model) <- c("Predicted.Money",
+                               "Gender",
+                               "Time")
+Pre.gifts.model$Time <- factor(Pre.gifts.model$Time,
+                               levels = c("2015","2021"),
+                               labels = c("Study-1 (2015)",
+                                          "Study-2 (2021)"))
+
+Pre.gifts.model$To.ID <- Gifts.dyad$To.ID
+
+Pre.gifts.model.sum <- ddply(Pre.gifts.model, .(Time,Gender), summarise, 
+                           N = length(unique(To.ID)),
+                           mean = mean(Predicted.Money), 
+                           sd = sd(Predicted.Money))
+Pre.gifts.model.sum <- mutate(Pre.gifts.model.sum,
+                            Conf.low = mean - sd,
+                            Conf.high = mean + sd)
+
+Pre.gifts.model.figure <- 
+  ggplot(Pre.gifts.model.sum,aes(x = Time, 
+                                 y = mean, 
+                                 group = Gender,
+                                 colour = Gender))+
+  geom_errorbar(aes(ymin = Conf.low, 
+                    ymax = Conf.high),
+                linewidth = 1.0, width = 0.10, 
+                position = position_dodge(0.4))+
+  geom_point(size = 3, position = position_dodge(0.4))+
+  labs(x = "Studies", 
+       y = "Prediced gifts")+
+  scale_x_discrete(breaks = c("Study-1 (2015)","Study-2 (2021)"),
+                   labels = c("Study-1 (2015)","Study-2 (2021)"))+
+  scale_y_continuous(limits = c(0.0020,0.0140),breaks = seq(0.0020,0.0140,0.0010))+
+  ##2015
+  geom_segment(x = 0.9, y = 0.0111920 + 0.00030, 
+               xend = 0.9 , yend = 0.0111920 + 0.00060,
+               colour = "black", linewidth = 0.8)+
+  geom_segment(x = 0.9, y = 0.0111920 + 0.00060,
+               xend = 1.1, yend = 0.0111920 + 0.00060,
+               colour = "black", linewidth = 0.8) +
+  geom_segment(x = 1.1, y = 0.0111920 + 0.00060 ,
+               xend = 1.1, yend = 0.0052797 + 0.00030,
+               colour = "black", linewidth = 0.8) +
+  geom_text(x = 1, y = 0.0111920 + 0.00090, 
+            aes(label = "***"), fontface = "bold",size = 8, colour = "black")+
+  theme(strip.background = element_rect(color = "black", fill = "white"),
+        strip.text.x = element_text(size = 16,face = "bold"),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line(colour = "Gainsboro"),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour="black",fill=NA),
+        panel.background = element_blank(),
+        legend.position = c(0.99,0.99),
+        legend.justification = c(0.99,0.99),
+        plot.title = element_text(size=18,face = "bold"),
+        axis.title.x = element_text(size = 18,face = "bold",
+                                    margin = margin(t = 0.3, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.text.x = element_text(colour="black",size=16,face = "bold",
+                                   margin = margin(t = 0.1, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.title.y = element_text(size = 18,face = "bold",
+                                    margin = margin(t = 0, r = 0.5, b = 0, l = 0,unit = "cm")),
+        axis.text.y = element_text(colour="black",size=16,face = "bold",
+                                   margin = margin(t = 0, r = 0.1, b = 0, l = 0,unit = "cm")),
+        legend.title=element_text(size=14,face = "bold"),
+        legend.text=element_text(size=12,face = "bold"))
+Pre.gifts.model.figure 
+
+ggsave(filename="D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\paper\\Gifts.model.pre.gender&time.jpeg", width=150, height=150, units="mm")
+
+
+```
+
+
+```{r Figures in supplementary materials, echo=TRUE}
+# Self-reported main category of each household’s expense  ----
+Main.expense <- 
+  ggplot(Main.household.expense,
+         aes(x = Categories,
+             y = Proportion,
+             fill = Categories))+
+  geom_bar(position = "dodge",stat = "identity")+
+  ylim(0,1)+
+  labs(x = "Categories",y = "Proportion")+
+  scale_x_discrete(breaks=c("Production","Education",
+                            "Medicine","Cranes","Tibetan house"),
+                   labels=c("Production","Education",
+                            "Medicine","Cranes","Tibetan house"))+
+  scale_fill_manual(name="Categories",
+                    values = c("#DCDCDC","#C5C5C5","#AEAEAE",
+                               "#969696","#696969"),
+                    breaks = c("Production","Education",
+                               "Medicine","Cranes","Tibetan house"),
+                    labels = c("Production","Education",
+                               "Medicine","Cranes","Tibetan house"))+
+  geom_text(x = 5, y = 0.66, 
+            aes(label = "61.11%"), 
+            fontface = "bold",
+            size = 6, 
+            colour = "black")+
+  theme(strip.background = element_rect(color = "black", fill = "white"),
+        strip.text.x = element_text(size = 16,face = "bold"),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line(colour = "Gainsboro"),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour="black",fill=NA),
+        panel.background = element_blank(),
+        legend.position = "None",
+        plot.title = element_text(size=18,face = "bold"),
+        axis.title.x = element_text(size = 18,face = "bold",
+                                    margin = margin(t = 0.3, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.text.x = element_text(colour="black",size=14,face = "bold",
+                                   margin = margin(t = 0.1, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.title.y = element_text(size = 18,face = "bold",
+                                    margin = margin(t = 0, r = 0.5, b = 0, l = 0,unit = "cm")),
+        axis.text.y = element_text(colour="black",size=14,face = "bold",
+                                   margin = margin(t = 0, r = 0.1, b = 0, l = 0,unit = "cm")),
+        legend.title=element_text(size=12,face = "bold"),
+        legend.text=element_text(size=12,face = "bold"))
+Main.expense
+ggsave(filename="D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\paper\\Gender&sib - inheritor models.jpeg", width=200, height=200, units="mm")
+
+
+# Proportion of each economic sources across years in administrative town ----
+Ethno.data.economy.figure <- 
+  ggplot(data = Economic.sources,
+         aes(x = Year, 
+             y = Proportion,
+             group = Economic.sources,
+             colour = Economic.sources,
+             fill = Economic.sources)) + 
+  geom_point(size = 3, alpha = 0.7)+
+  geom_xspline(spline_shape = -0.4, 
+               size = 3, alpha = 0.7)+
+  xlab("Year")+
+  ylab("Proportion")+
+  labs(group = "Economic sources")+
+  scale_x_continuous(limits = c(2000,2015),
+                     breaks = seq(2000,2015,5))+
+  scale_y_continuous(limits = c(0.0,1),
+                     breaks = seq(0.0,1,0.2))+
+  scale_colour_manual(name = "Economic sources",
+                      values = c("#fb8072", "#8dd3c7", "#80b1d3"))+
+  scale_fill_manual(name = "Economic sources",
+                    values = c("#fb8072", "#8dd3c7", "#80b1d3"))+
+  theme(strip.background = element_rect(color = "black", fill = "white"),
+        strip.text.x = element_text(size = 16,face = "bold"),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line(colour = "Gainsboro"),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour="black",fill=NA),
+        panel.background = element_blank(),
+        legend.position = c(0.99,0.99),
+        legend.justification = c(0.99,0.99),
+        plot.title = element_text(size=18,face = "bold"),
+        axis.title.x = element_text(size = 18,face = "bold",
+                                    margin = margin(t = 0.3, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.text.x = element_text(colour="black",size=16,face = "bold",
+                                   margin = margin(t = 0.1, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.title.y = element_text(size = 18,face = "bold",
+                                    margin = margin(t = 0, r = 0.5, b = 0, l = 0,unit = "cm")),
+        axis.text.y = element_text(colour="black",size=16,face = "bold",
+                                   margin = margin(t = 0, r = 0.1, b = 0, l = 0,unit = "cm")),
+        legend.title=element_text(size=14,face = "bold"),
+        legend.text=element_text(size=12,face = "bold"))
+
+Ethno.data.economy.figure
+ggsave(filename="D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\Ethno.data.economy.jpeg", width=200, height=100, units="mm")
+
+# Proportions of household income by economic types and study times ----
+Household.income.15_21.figure <- 
+ggplot(data = Household.income.15_21,
+       aes(x = Year, 
+           y = Proportion,
+           fill = Types))+
+  geom_boxplot(alpha = 0.3)+
+  xlab("Years")+
+  ylab("Proportion")+
+  scale_x_discrete(breaks=c("2015","2021"),
+                   labels=c("2015","2021"))+
+  scale_y_continuous(limits = c(0,1),breaks = seq(0,1,0.1))+
+  scale_fill_manual(name = "",
+                    values = c("#fb8072", "#8dd3c7", "#80b1d3"))+
+  theme(strip.background = element_rect(color = "black", fill = "white"),
+        strip.text.x = element_text(size = 16,face = "bold"),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line(colour = "Gainsboro"),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour="black",fill=NA),
+        panel.background = element_blank(),
+        plot.title = element_text(size=18,face = "bold"),
+        legend.position = "none",
+        axis.title.x = element_text(size = 18,face = "bold",
+                                    margin = margin(t = 0.3, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.text.x = element_text(colour="black",size=16,face = "bold",
+                                   margin = margin(t = 0.1, r = 0, b = 0, l = 0,unit = "cm")),
+        axis.title.y = element_text(size = 18,face = "bold",
+                                    margin = margin(t = 0, r = 0.5, b = 0, l = 0,unit = "cm")),
+        axis.text.y = element_text(colour="black",size=16,face = "bold",
+                                   margin = margin(t = 0, r = 0.1, b = 0, l = 0,unit = "cm")),
+        legend.title=element_text(size=14,face = "bold"),
+        legend.text=element_text(size=12,face = "bold"))
+
+Household.income.15_21.figure
+
+ggsave(filename="D:\\Shangri-La\\shangri-la data analyses\\give gift\\separate data by interview year\\paper\\15vs21 economy.jpeg", width=180, height=180, units="mm")
+
+```
