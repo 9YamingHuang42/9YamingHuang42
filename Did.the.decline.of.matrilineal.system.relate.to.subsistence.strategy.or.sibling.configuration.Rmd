@@ -72,16 +72,16 @@ Inheritance.model.5 <- glmmTMB(Inheritance ~ Subsistence + (1|Mother_ID),
                                data = Inheritance.data,
                                family = binomial())
 
-Inheritance.model.6 <- glmmTMB(Inheritance ~ Cohort + Gender + (1|Mother_ID),
+Inheritance.model.6 <- glmmTMB(Inheritance ~ Gender + Cohort + (1|Mother_ID),
                                data = Inheritance.data,
                                family = binomial())
 
-Inheritance.model.7 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+Inheritance.model.7 <- glmmTMB(Inheritance ~ Gender + Cohort + 
                                  Sibling.configuration + (1|Mother_ID),
                                data = Inheritance.data,
                                family = binomial())
 
-Inheritance.model.8 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+Inheritance.model.8 <- glmmTMB(Inheritance ~ Gender + Cohort + 
                                  Subsistence + (1|Mother_ID),
                                data = Inheritance.data,
                                family = binomial())
@@ -95,51 +95,133 @@ summary(Inheritance.model.9)
 Inheritance.model.9.Conf <- as.data.frame(confint(Inheritance.model.9, level = 0.95))
 (Inheritance.model.9.OR <- exp(Inheritance.model.9.Conf))
 
-Inheritance.model.10 <- glmmTMB(Inheritance ~ Cohort * Gender + 
-                                  Sibling.configuration + Subsistence + (1|Mother_ID),
+Inheritance.model.10 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+                                  Sibling.configuration + Subsistence + 
+                                  Cohort : Gender + (1|Mother_ID),
                                 data = Inheritance.data,
                                 family = binomial())
 summary(Inheritance.model.10)
-Em.inheritance.model.10 <- emmeans(Inheritance.model.10, ~ Cohort * Gender)
+Inheritance.model.10.Conf <- as.data.frame(confint(Inheritance.model.10,level = 0.95))
+(Inheritance.model.10.OR_95ci <- exp(Inheritance.model.10.Conf))
+Em.inheritance.model.10 <- emmeans(Inheritance.model.10, ~ Cohort : Gender)
 contrast(Em.inheritance.model.10, "revpairwise", by="Cohort", adjust="none")
 Em.inheritance.model.10.confint <- as.data.frame(confint(contrast(Em.inheritance.model.10, "revpairwise", by="Cohort", adjust="none")))
 (Em.inheritance.model.10.confint.OR_95ci <- Em.inheritance.model.10.confint %>%
   mutate(OR = exp(Em.inheritance.model.10.confint$estimate),
          low_ci = exp(Em.inheritance.model.10.confint$lower.CL),
          high_ci = exp(Em.inheritance.model.10.confint$upper.CL)))
-Inheritance.model.10.Conf <- as.data.frame(confint(Inheritance.model.10,level = 0.95))
-(Inheritance.model.10.OR_95ci <- exp(Inheritance.model.10.Conf))
 
-Inheritance.model.11 <- glmmTMB(Inheritance ~ Cohort + 
-                                  Gender * Sibling.configuration +
-                                   Subsistence + (1|Mother_ID),
+Inheritance.model.11 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+                                  Sibling.configuration + Subsistence +
+                                  Sibling.configuration : Gender + (1|Mother_ID),
                                  data = Inheritance.data,
                                  family = binomial())
 summary(Inheritance.model.11)
-Em.inheritance.model.11<- emmeans(Inheritance.model.11, ~ Gender * Sibling.configuration)
+Inheritance.model.11.Conf <- as.data.frame(confint(Inheritance.model.11, level = 0.95))
+(Inheritance.model.11.OR_95ci <- exp(Inheritance.model.11.Conf))
+Em.inheritance.model.11<- emmeans(Inheritance.model.11, ~ Sibling.configuration : Gender)
 contrast(Em.inheritance.model.11, "revpairwise",by="Sibling.configuration",adjust="none")
 Em.inheritance.model.11.confint <- as.data.frame(confint(contrast(Em.inheritance.model.11, "revpairwise", by="Sibling.configuration", adjust="none")))
 (Em.inheritance.model.11.confint.OR_95ci <- Em.inheritance.model.11.confint %>%
   mutate(OR = exp(Em.inheritance.model.11.confint$estimate),
          low_ci = exp(Em.inheritance.model.11.confint$lower.CL),
          high_ci = exp(Em.inheritance.model.11.confint$upper.CL)))
-Inheritance.model.11.Conf <- as.data.frame(confint(Inheritance.model.11, level = 0.95))
-(Inheritance.model.11.OR_95ci <- exp(Inheritance.model.11.Conf))
 
-Inheritance.model.12 <- glmmTMB(Inheritance ~ Cohort + Sibling.configuration +
-                                  Gender * Subsistence + (1|Mother_ID),
+Inheritance.model.12 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+                                  Sibling.configuration + Subsistence +
+                                  Subsistence : Gender + (1|Mother_ID),
                                 data = Inheritance.data,
                                 family = binomial())
 summary(Inheritance.model.12)
-Em.inheritance.model.12 <- emmeans(Inheritance.model.12, ~ Subsistence * Gender)
+Inheritance.model.12.Conf <- as.data.frame(confint(Inheritance.model.12, level = 0.95))
+(Inheritance.model.12.OR_95ci <- exp(Inheritance.model.12.Conf))
+Em.inheritance.model.12 <- emmeans(Inheritance.model.12, ~ Subsistence : Gender)
 contrast(Em.inheritance.model.12, "revpairwise",by="Subsistence",adjust="none")
 Em.inheritance.model.12.confint <- as.data.frame(confint(contrast(Em.inheritance.model.12, "revpairwise", by="Subsistence", adjust="none")))
 (Em.inheritance.model.12.confint.OR_95ci <- Em.inheritance.model.12.confint %>%
   mutate(OR = exp(Em.inheritance.model.12.confint$estimate),
          low_ci = exp(Em.inheritance.model.12.confint$lower.CL),
          high_ci = exp(Em.inheritance.model.12.confint$upper.CL)))
-Inheritance.model.12.Conf <- as.data.frame(confint(Inheritance.model.12, level = 0.95))
-(Inheritance.model.12.OR_95ci <- exp(Inheritance.model.12.Conf))
+
+Inheritance.model.13 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+                                  Sibling.configuration + Subsistence +
+                                  Cohort : Gender + 
+                                  Sibling.configuration : Gender + (1|Mother_ID),
+                                data = Inheritance.data,
+                                family = binomial())
+summary(Inheritance.model.13)
+Inheritance.model.13.Conf <- as.data.frame(confint(Inheritance.model.13, level = 0.95))
+(Inheritance.model.13.OR_95ci <- exp(Inheritance.model.13.Conf))
+Em.inheritance.model.13.1 <- emmeans(Inheritance.model.13, ~ Cohort : Gender)
+contrast(Em.inheritance.model.13.1, "revpairwise",by="Cohort",adjust="none")
+Em.inheritance.model.13.1.confint <- as.data.frame(confint(contrast(Em.inheritance.model.13.1, "revpairwise", by="Cohort", adjust="none")))
+(Em.inheritance.model.13.1.confint.OR_95ci <- Em.inheritance.model.13.1.confint %>%
+  mutate(OR = exp(Em.inheritance.model.13.1.confint$estimate),
+         low_ci = exp(Em.inheritance.model.13.1.confint$lower.CL),
+         high_ci = exp(Em.inheritance.model.13.1.confint$upper.CL)))
+Em.inheritance.model.13.2 <- emmeans(Inheritance.model.13, ~ Sibling.configuration : Gender)
+contrast(Em.inheritance.model.13.2, "revpairwise",by="Sibling.configuration",adjust="none")
+Em.inheritance.model.13.2.confint <- as.data.frame(confint(contrast(Em.inheritance.model.13.2, "revpairwise", by="Sibling.configuration", adjust="none")))
+(Em.inheritance.model.13.2.confint.OR_95ci <- Em.inheritance.model.13.2.confint %>%
+  mutate(OR = exp(Em.inheritance.model.13.2.confint$estimate),
+         low_ci = exp(Em.inheritance.model.13.2.confint$lower.CL),
+         high_ci = exp(Em.inheritance.model.13.2.confint$upper.CL)))
+
+Inheritance.model.14 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+                                  Sibling.configuration + Subsistence +
+                                  Gender : Cohort + 
+                                  Subsistence : Gender + (1|Mother_ID),
+                                data = Inheritance.data,
+                                family = binomial())
+summary(Inheritance.model.14)
+Inheritance.model.14.Conf <- as.data.frame(confint(Inheritance.model.14, level = 0.95))
+(Inheritance.model.14.OR_95ci <- exp(Inheritance.model.14.Conf))
+Em.inheritance.model.14.1 <- emmeans(Inheritance.model.14, ~ Gender : Cohort)
+contrast(Em.inheritance.model.14.1, "revpairwise",by="Cohort",adjust="none")
+Em.inheritance.model.14.1.confint <- as.data.frame(confint(contrast(Em.inheritance.model.14.1, "revpairwise", by="Cohort", adjust="none")))
+(Em.inheritance.model.14.1.confint.OR_95ci <- Em.inheritance.model.14.1.confint %>%
+  mutate(OR = exp(Em.inheritance.model.14.1.confint$estimate),
+         low_ci = exp(Em.inheritance.model.14.1.confint$lower.CL),
+         high_ci = exp(Em.inheritance.model.14.1.confint$upper.CL)))
+Em.inheritance.model.14.2 <- emmeans(Inheritance.model.14, ~ Gender : Subsistence)
+contrast(Em.inheritance.model.14.2, "revpairwise",by="Subsistence",adjust="none")
+Em.inheritance.model.14.2.confint <- as.data.frame(confint(contrast(Em.inheritance.model.14.2, "revpairwise", by="Subsistence", adjust="none")))
+(Em.inheritance.model.14.2.confint.OR_95ci <- Em.inheritance.model.14.2.confint %>%
+  mutate(OR = exp(Em.inheritance.model.14.2.confint$estimate),
+         low_ci = exp(Em.inheritance.model.14.2.confint$lower.CL),
+         high_ci = exp(Em.inheritance.model.14.2.confint$upper.CL)))
+
+Inheritance.model.15 <- glmmTMB(Inheritance ~ Cohort + Gender + 
+                                  Sibling.configuration + Subsistence +
+                                  Cohort : Gender + 
+                                  Sibling.configuration : Gender + 
+                                  Subsistence : Gender + (1|Mother_ID),
+                                data = Inheritance.data,
+                                family = binomial())
+summary(Inheritance.model.15)
+Inheritance.model.15.Conf <- as.data.frame(confint(Inheritance.model.15, level = 0.95))
+(Inheritance.model.15.OR_95ci <- exp(Inheritance.model.15.Conf))
+Em.inheritance.model.15.1 <- emmeans(Inheritance.model.15, ~ Cohort : Gender)
+contrast(Em.inheritance.model.15.1, "revpairwise",by="Cohort",adjust="none")
+Em.inheritance.model.15.1.confint <- as.data.frame(confint(contrast(Em.inheritance.model.15.1, "revpairwise", by="Cohort", adjust="none")))
+(Em.inheritance.model.15.1.confint.OR_95ci <- Em.inheritance.model.15.1.confint %>%
+  mutate(OR = exp(Em.inheritance.model.15.1.confint$estimate),
+         low_ci = exp(Em.inheritance.model.15.1.confint$lower.CL),
+         high_ci = exp(Em.inheritance.model.15.1.confint$upper.CL)))
+Em.inheritance.model.15.2 <- emmeans(Inheritance.model.15, ~ Sibling.configuration : Gender)
+contrast(Em.inheritance.model.15.2, "revpairwise",by="Sibling.configuration",adjust="none")
+Em.inheritance.model.15.2.confint <- as.data.frame(confint(contrast(Em.inheritance.model.15.2, "revpairwise", by="Sibling.configuration", adjust="none")))
+(Em.inheritance.model.15.2.confint.OR_95ci <- Em.inheritance.model.15.2.confint %>%
+  mutate(OR = exp(Em.inheritance.model.15.2.confint$estimate),
+         low_ci = exp(Em.inheritance.model.15.2.confint$lower.CL),
+         high_ci = exp(Em.inheritance.model.15.2.confint$upper.CL)))
+Em.inheritance.model.15.3 <- emmeans(Inheritance.model.15, ~ Subsistence : Gender)
+contrast(Em.inheritance.model.15.3, "revpairwise",by="Subsistence",adjust="none")
+Em.inheritance.model.15.3.confint <- as.data.frame(confint(contrast(Em.inheritance.model.15.3, "revpairwise", by="Subsistence", adjust="none")))
+(Em.inheritance.model.15.3.confint.OR_95ci <- Em.inheritance.model.15.3.confint %>%
+  mutate(OR = exp(Em.inheritance.model.15.3.confint$estimate),
+         low_ci = exp(Em.inheritance.model.15.3.confint$lower.CL),
+         high_ci = exp(Em.inheritance.model.15.3.confint$upper.CL)))
 
 (Model.sel.inheritance <- model.sel(Inheritance.model.1,
                                     Inheritance.model.2,
@@ -153,6 +235,9 @@ Inheritance.model.12.Conf <- as.data.frame(confint(Inheritance.model.12, level =
                                     Inheritance.model.10,
                                     Inheritance.model.11,
                                     Inheritance.model.12,
+                                    Inheritance.model.13,
+                                    Inheritance.model.14,
+                                    Inheritance.model.15,
                                     rank = AIC))
 
 (AIC.inheritance <- AIC(Inheritance.model.1,
@@ -166,7 +251,10 @@ Inheritance.model.12.Conf <- as.data.frame(confint(Inheritance.model.12, level =
                         Inheritance.model.9,
                         Inheritance.model.10,
                         Inheritance.model.11,
-                        Inheritance.model.12))
+                        Inheritance.model.12,
+                        Inheritance.model.13,
+                        Inheritance.model.14,
+                        Inheritance.model.15))
 
 # Plot figures ----
 ## OR figures-model 10, model 11 and model 12  ----
